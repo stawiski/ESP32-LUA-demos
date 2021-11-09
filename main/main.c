@@ -4,21 +4,37 @@
 #include <string.h>
 #include <math.h>
 // ESP32
-#include "esp_system.h"
-#include "esp_spi_flash.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-// Local
-#include <lua/lua.h>
-#include <lua/lauxlib.h>
-#include <lua/lualib.h>
-
+#include <esp_system.h>
+#include <esp_spi_flash.h>
 #include <esp_spiffs.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+// Components
+#include <lua/lua.h>
+#include <lua/lauxlib.h>
+#include <lua/lualib.h>
+#include <lwmem/lwmem.h>
+
+#ifndef LUA_HEAP_SIZE
+    #error "LUA_HEAP_SIZE not defined"
+#endif
+
+uint8_t ssLuaHeapRegion[LUA_HEAP_SIZE];
+static size_t ssLuaUsedHeap = 0, ssLuaMaxHeapUsed = 0;
+
+static lwmem_region_t ssLwmemHeapRegions[] =
+{
+    {ssLuaHeapRegion, sizeof(ssLuaHeapRegion)},
+};
+
+static const lwmem_region_t* getLwmemHeapRegionForLua(void)
+{
+    return &ssLwmemHeapRegions[0];
+}
 
 static const char *TAG = "LUA-VFS";
-static const uint32_t LUA_MAX_MEMSIZE = 16 * 1024 * 1024;
 
 static void report(lua_State *L, int status)
 {
@@ -41,7 +57,7 @@ static void halt()
     }
 }
 
-static void mount_fs()
+static void mount_fs(void)
 {
     esp_vfs_spiffs_conf_t conf =
     {
@@ -73,9 +89,7 @@ static void mount_fs()
     ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
 }
 
-static size_t lua_mem_size = 0;
-
-static void* l_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
+static void* luaMemoryAllocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
     // LUA is reallocating a memory block, this means it could be:
     // - expanding existing memory block
@@ -86,37 +100,40 @@ static void* l_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
     if (ptr == NULL)
     {
         // Allocating new object
-        lua_mem_size += nsize;
-        return malloc(nsize);
+        ssLuaUsedHeap += nsize;
+        ssLuaMaxHeapUsed = (ssLuaUsedHeap > ssLuaMaxHeapUsed) ? ssLuaUsedHeap : ssLuaMaxHeapUsed;
+        return lwmem_malloc_ex(NULL, getLwmemHeapRegionForLua(), nsize);
     }
     else if (nsize == 0)
     {
         // Freeing existing object
-        lua_mem_size -= osize;
-        free(ptr);
+        ssLuaUsedHeap -= osize;
+        lwmem_free_ex(NULL, ptr);
         return NULL;
     }
     else
     {
         // Reallocating existing object
-        size_t new_size = lua_mem_size - osize + nsize;
-        if (new_size > LUA_MAX_MEMSIZE)
+        size_t new_size = ssLuaUsedHeap - osize + nsize;
+        if (new_size > LUA_HEAP_SIZE)
         {
-            printf("Error! Lua wants more memory than we can allocate: %u > %u\n", new_size, LUA_MAX_MEMSIZE);
+            printf("Error! Lua wants more memory than we can allocate: %u > %u\n", new_size, LUA_HEAP_SIZE);
             return NULL;
         }
-        lua_mem_size += nsize - osize;
-        return realloc(ptr, nsize);
+        ssLuaUsedHeap += nsize - osize;
+        ssLuaMaxHeapUsed = (ssLuaUsedHeap > ssLuaMaxHeapUsed) ? ssLuaUsedHeap : ssLuaMaxHeapUsed;
+        return lwmem_realloc_ex(NULL, getLwmemHeapRegionForLua(), ptr, nsize);
     }
 }
 
 void test(void *arg)
 {
     mount_fs();
+    assert(lwmem_assignmem(ssLwmemHeapRegions, LWMEM_ARRAYSIZE(ssLwmemHeapRegions)));
 
     while (1)
     {
-        lua_State *L = lua_newstate(l_alloc, NULL);
+        lua_State *L = lua_newstate(luaMemoryAllocator, NULL);
         ESP_ERROR_CHECK(L ? ESP_OK : ESP_FAIL);
         luaL_openlibs(L);
         int r = luaL_loadfilex(L, "/lua/main.lua", NULL);
@@ -128,10 +145,12 @@ void test(void *arg)
         {
             r = lua_pcall(L, 0, LUA_MULTRET, 0);
         }
+        printf("[LUA] Current heap usage %u/%u (%.1f%% free)\n", ssLuaUsedHeap, LUA_HEAP_SIZE, 100.0f - ((((float)ssLuaUsedHeap) * 100.0f) / ((float)LUA_HEAP_SIZE)));
 
         report(L, r);
         lua_close(L);
 
+        printf("[LUA] Maximum heap usage %u/%u (%.1f%% free)\n", ssLuaMaxHeapUsed, LUA_HEAP_SIZE, 100.0f - ((((float)ssLuaMaxHeapUsed) * 100.0f) / ((float)LUA_HEAP_SIZE)));
         printf("[LUA] heap: %d\n", xPortGetFreeHeapSize());
         printf("[LUA] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
         vTaskDelay(pdMS_TO_TICKS(500));
