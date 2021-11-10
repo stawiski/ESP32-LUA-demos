@@ -30,6 +30,7 @@ RUN rm -rf /tmp/*
 RUN luarocks install busted
 RUN luarocks install luacheck
 RUN luarocks install lanes
+RUN luarocks install inspect
 
 # Check versions
 RUN lua -v
