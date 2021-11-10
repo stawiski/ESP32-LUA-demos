@@ -126,6 +126,11 @@ static void* luaMemoryAllocator(void *ud, void *ptr, size_t osize, size_t nsize)
     }
 }
 
+float calculateFreeHeapPrecentage(uint32_t heapUsedBytes, uint32_t heapSizeBytes)
+{
+    return 100.0f - ((((float)heapUsedBytes) * 100.0f) / ((float)heapSizeBytes));
+}
+
 void test(void *arg)
 {
     mount_fs();
@@ -145,12 +150,12 @@ void test(void *arg)
         {
             r = lua_pcall(L, 0, LUA_MULTRET, 0);
         }
-        printf("[LUA] Current heap usage %u/%u (%.1f%% free)\n", ssLuaUsedHeap, LUA_HEAP_SIZE, 100.0f - ((((float)ssLuaUsedHeap) * 100.0f) / ((float)LUA_HEAP_SIZE)));
+        printf("[LUA] Current heap usage %u/%u (%.1f%% free)\n", ssLuaUsedHeap, LUA_HEAP_SIZE, calculateFreeHeapPrecentage(ssLuaUsedHeap, LUA_HEAP_SIZE));
 
         report(L, r);
         lua_close(L);
 
-        printf("[LUA] Maximum heap usage %u/%u (%.1f%% free)\n", ssLuaMaxHeapUsed, LUA_HEAP_SIZE, 100.0f - ((((float)ssLuaMaxHeapUsed) * 100.0f) / ((float)LUA_HEAP_SIZE)));
+        printf("[LUA] Maximum heap usage %u/%u (%.1f%% free)\n", ssLuaMaxHeapUsed, LUA_HEAP_SIZE, calculateFreeHeapPrecentage(ssLuaMaxHeapUsed, LUA_HEAP_SIZE));
         printf("[LUA] heap: %d\n", xPortGetFreeHeapSize());
         printf("[LUA] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
         vTaskDelay(pdMS_TO_TICKS(500));
