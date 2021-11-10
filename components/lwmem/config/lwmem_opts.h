@@ -29,4 +29,10 @@
 #ifndef LWMEM_HDR_OPTS_H
 #define LWMEM_HDR_OPTS_H
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+#define LWMEM_CFG_OS                            1
+#define LWMEM_CFG_OS_MUTEX_HANDLE               SemaphoreHandle_t
+
 #endif /* LWMEM_HDR_OPTS_H */
