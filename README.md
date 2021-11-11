@@ -6,3 +6,5 @@ Thanks
 - https://olivinelabs.com/busted/
 - https://github.com/mpeterv/luacheck
 - https://github.com/MaJerle/lwmem
+- https://github.com/gleb-kosteiko/conways-game-of-life
+- https://github.com/lvgl/lv_port_esp32

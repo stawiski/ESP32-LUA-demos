@@ -1,4 +1,8 @@
-idf_component_register(SRCS "main.c"
+idf_component_register(SRCS
+                    "main.c"
+                    "lua_app.c"
+                    "gui_app.c"
+                    "utils.c"
                     INCLUDE_DIRS "."
                     REQUIRES
                     # ESP-IDF built-in components
