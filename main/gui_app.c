@@ -26,33 +26,23 @@ static void lv_tick_task(void *arg);
 
 // Private variables
 
-/* Creates a semaphore to handle concurrent call to lvgl stuff
- * If you wish to call *any* lvgl function from other threads/tasks
- * you should lock on the very same semaphore! */
-SemaphoreHandle_t xGuiSemaphore;
-static EXT_RAM_ATTR lv_color_t ssCanvasBuffer[CANVAS_WIDTH * CANVAS_HEIGHT * sizeof(lv_color_t)];
-static lv_obj_t *ssCanvasPtr;
+static SemaphoreHandle_t xGuiSemaphore;
 
 static EXT_RAM_ATTR lv_color_t  ssFrameBufferA[DISP_BUF_SIZE * sizeof(lv_color_t)],
                                 ssFrameBufferB[DISP_BUF_SIZE * sizeof(lv_color_t)];
 
+static EXT_RAM_ATTR lv_color_t ssCanvasBuffer[CANVAS_WIDTH * CANVAS_HEIGHT * sizeof(lv_color_t)];
+static lv_obj_t *ssCanvasPtr;
+
 // Implementation
 
 // Private functions
-
-static void draw_canvas_task_cb(lv_task_t * task)
-{
-    lv_obj_clean(ssCanvasPtr);
-    lv_canvas_fill_bg(ssCanvasPtr, makeRandomColor(), LV_OPA_COVER);
-    // lv_canvas_set_px(canvas, (lv_coord_t)(randf()*CANVAS_WIDTH), (lv_coord_t)(randf()*CANVAS_HEIGHT), makeRandomColor());
-}
 
 static void create_demo_app(void)
 {
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
     lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, CANVAS_WIDTH, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_task_create(draw_canvas_task_cb, 50, LV_TASK_PRIO_LOW, NULL);
 }
 
 static void lv_tick_task(void *arg)
@@ -125,9 +115,6 @@ void GuiTask(void *pvParameter)
     // Create demo
     create_demo_app();
 
-    // lv_obj_clean(ssCanvasPtr);
-    // lv_obj_invalidate(ssCanvasPtr);
-
     // Give the semaphore as the GUI task is ready
     xSemaphoreGive(xGuiSemaphore);
 
@@ -143,8 +130,9 @@ void GuiTask(void *pvParameter)
             lastLogPrintTimeMs = millis();
         }
 
-        // lv_canvas_set_px(ssCanvasPtr, ((uint32_t)randf()) % 100, ((uint32_t)randf()) % 100, makeRandomColor());
-        // lv_obj_invalidate(ssCanvasPtr);
+        lv_obj_clean(ssCanvasPtr);
+        lv_canvas_fill_bg(ssCanvasPtr, makeRandomColor(), LV_OPA_COVER);
+        lv_obj_invalidate(ssCanvasPtr);
 
         // Try to take the semaphore, call lvgl related function on success
         if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
