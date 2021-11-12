@@ -16,6 +16,8 @@
 #include <lua/lauxlib.h>
 #include <lua/lualib.h>
 #include <lwmem/lwmem.h>
+// Local
+#include "gui_app.h"
 
 #ifndef LUA_HEAP_SIZE
     #error "LUA_HEAP_SIZE not defined"
@@ -131,6 +133,29 @@ float calculateFreeHeapPrecentage(uint32_t heapUsedBytes, uint32_t heapSizeBytes
     return 100.0f - ((((float)heapUsedBytes) * 100.0f) / ((float)heapSizeBytes));
 }
 
+static int luaDrawCell(lua_State *L)
+{
+    int x = luaL_checkinteger(L, 1);
+    int y = luaL_checkinteger(L, 2);
+    int isAlive = luaL_checkinteger(L, 3);
+    // lcdDrawPoint(x, y, att);
+    GuiDrawPixel(x, y, isAlive ? LV_COLOR_BLACK : LV_COLOR_WHITE);
+    printf("luaDrawCell(%d, %d, %d)\n", x, y, isAlive);
+    return 0;
+}
+
+static const struct luaL_Reg ssLuaDrawFuncs[] =
+{
+    {"drawCell", luaDrawCell},
+    {NULL, NULL}
+};
+
+int luaopen_lDraw(lua_State *L)
+{
+    luaL_newlib(L, ssLuaDrawFuncs);
+    return 1;
+}
+
 void LuaTask(void *arg)
 {
     mount_fs();
@@ -140,7 +165,11 @@ void LuaTask(void *arg)
     {
         lua_State *L = lua_newstate(luaMemoryAllocator, NULL);
         ESP_ERROR_CHECK(L ? ESP_OK : ESP_FAIL);
+
         luaL_openlibs(L);
+        luaL_requiref(L, "draw", luaopen_lDraw, 1);
+        lua_pop(L, 1);
+
         int r = luaL_loadfilex(L, "/lua/main.lua", NULL);
         if (r != LUA_OK)
         {

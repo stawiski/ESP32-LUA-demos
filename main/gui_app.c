@@ -9,9 +9,6 @@
 #include <esp_freertos_hooks.h>
 #include <freertos/semphr.h>
 #include <esp_system.h>
-// LVGL
-#include <lvgl.h>
-#include <lvgl_helpers.h>
 // Local
 #include "gui_app.h"
 #include "utils.h"
@@ -43,6 +40,8 @@ static void create_demo_app(void)
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
     lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, CANVAS_WIDTH, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_WHITE, LV_OPA_COVER);
+    lv_obj_invalidate(ssCanvasPtr);
 }
 
 static void lv_tick_task(void *arg)
@@ -130,10 +129,6 @@ void GuiTask(void *pvParameter)
             lastLogPrintTimeMs = millis();
         }
 
-        lv_obj_clean(ssCanvasPtr);
-        lv_canvas_fill_bg(ssCanvasPtr, makeRandomColor(), LV_OPA_COVER);
-        lv_obj_invalidate(ssCanvasPtr);
-
         // Try to take the semaphore, call lvgl related function on success
         if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
         {
@@ -151,3 +146,12 @@ void GuiTask(void *pvParameter)
     vTaskDelete(NULL);
 }
 
+void GuiDrawPixel(uint32_t x, uint32_t y, lv_color_t color)
+{
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    {
+        lv_canvas_set_px(ssCanvasPtr, x, y, color);
+        lv_obj_invalidate(ssCanvasPtr);
+        xSemaphoreGive(xGuiSemaphore);
+    }
+}
