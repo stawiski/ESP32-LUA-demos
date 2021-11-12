@@ -46,7 +46,7 @@ void app_main(void)
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
     xTaskCreate(&systemTask, "system", 2 * 1024, NULL, 1, NULL);
-    // xTaskCreate(&LuaTask, "lua", 16 * 1024, NULL, 5, NULL);
+    xTaskCreate(&LuaTask, "lua", 16 * 1024, NULL, 5, NULL);
 
     // If you want to use a task to create the graphic, you NEED to create a Pinned task
     // Otherwise there can be problem such as memory corruption and so on.
