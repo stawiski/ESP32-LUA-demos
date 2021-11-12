@@ -23,7 +23,7 @@
     #error "LUA_HEAP_SIZE not defined"
 #endif
 
-uint8_t ssLuaHeapRegion[LUA_HEAP_SIZE];
+uint8_t EXT_RAM_ATTR ssLuaHeapRegion[LUA_HEAP_SIZE];
 static size_t ssLuaUsedHeap = 0, ssLuaMaxHeapUsed = 0;
 
 static lwmem_region_t ssLwmemHeapRegions[] =

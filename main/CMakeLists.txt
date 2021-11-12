@@ -15,4 +15,4 @@ idf_component_register(SRCS
                     lvgl_esp32_drivers
 )
 
-add_compile_definitions(LUA_HEAP_SIZE=65536)
+add_compile_definitions(LUA_HEAP_SIZE=262144) # 256KB

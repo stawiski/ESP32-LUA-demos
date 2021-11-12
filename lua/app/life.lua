@@ -1,5 +1,7 @@
-local cell = require "app.cell"
-local utils = require "app.utils"
+local cell = require "cell"
+local utils = require "utils"
+
+local life = {}
 
 function printMap(map)
     print("--- printMap ---")
@@ -62,10 +64,12 @@ function generateInitialCells(map, mapSizeX, mapSizeY)
     for x = 0, mapSizeX - 1 do
         map[x] = {}
         for y = 0, mapSizeY - 1 do
-            local cell = Cell.new(x, y, math.random(0, 10) == 1)
+            local cell = Cell.new(x, y, math.random(0, 4) == 1)
             map[x][y] = cell
         end
     end
 
     return map
 end
+
+return life
