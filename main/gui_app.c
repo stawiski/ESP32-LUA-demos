@@ -33,6 +33,9 @@ SemaphoreHandle_t xGuiSemaphore;
 static EXT_RAM_ATTR lv_color_t ssCanvasBuffer[CANVAS_WIDTH * CANVAS_HEIGHT * sizeof(lv_color_t)];
 static lv_obj_t *ssCanvasPtr;
 
+static EXT_RAM_ATTR lv_color_t  ssFrameBufferA[DISP_BUF_SIZE * sizeof(lv_color_t)],
+                                ssFrameBufferB[DISP_BUF_SIZE * sizeof(lv_color_t)];
+
 // Implementation
 
 // Private functions
@@ -67,20 +70,7 @@ void GuiTask(void *pvParameter)
     xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
 
     lv_init();
-
-    /* Initialize SPI or I2C bus used by the drivers */
     lvgl_driver_init();
-
-    lv_color_t* buf1 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    assert(buf1 != NULL);
-
-    /* Use double buffered when not working with monochrome displays */
-#ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-    lv_color_t* buf2 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    assert(buf2 != NULL);
-#else
-    static lv_color_t *buf2 = NULL;
-#endif
 
     static lv_disp_buf_t disp_buf;
     uint32_t size_in_px = DISP_BUF_SIZE;
@@ -96,7 +86,7 @@ void GuiTask(void *pvParameter)
 
     /* Initialize the working buffer depending on the selected display.
      * NOTE: buf2 == NULL when using monochrome displays. */
-    lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
+    lv_disp_buf_init(&disp_buf, ssFrameBufferA, ssFrameBufferB, size_in_px);
 
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
@@ -169,11 +159,7 @@ void GuiTask(void *pvParameter)
 
     printf("[GUI] Task ended\n");
 
-    /* A task should NEVER return */
-    free(buf1);
-#ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-    free(buf2);
-#endif
+    // A task should NEVER return.
     vTaskDelete(NULL);
 }
 
