@@ -16,4 +16,3 @@ idf_component_register(SRCS
 )
 
 add_compile_definitions(LUA_HEAP_SIZE=65536)
-add_compile_definitions(LV_LVGL_H_INCLUDE_SIMPLE)

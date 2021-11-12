@@ -4,27 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 // FreeRTOS and ESP32
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_freertos_hooks.h"
-#include "freertos/semphr.h"
-#include "esp_system.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <esp_freertos_hooks.h>
+#include <freertos/semphr.h>
+#include <esp_system.h>
+// LVGL
+#include <lvgl.h>
+#include <lvgl_helpers.h>
 // Local
 #include "gui_app.h"
 #include "utils.h"
 
-// Littlevgl specific
-#ifdef LV_LVGL_H_INCLUDE_SIMPLE
-    #include "lvgl.h"
-#else
-    #include "lvgl/lvgl.h"
-#endif
-
-#include "lvgl_helpers.h"
-
 #define LV_TICK_PERIOD_MS 1
-#define CANVAS_WIDTH 144
-#define CANVAS_HEIGHT 108
+#define CANVAS_WIDTH 50
+#define CANVAS_HEIGHT 50
 
 // Forward declarations
 
@@ -43,13 +37,19 @@ static lv_obj_t *ssCanvasPtr;
 
 // Private functions
 
+static void draw_canvas_task_cb(lv_task_t * task)
+{
+    lv_obj_clean(ssCanvasPtr);
+    lv_canvas_fill_bg(ssCanvasPtr, makeRandomColor(), LV_OPA_COVER);
+    // lv_canvas_set_px(canvas, (lv_coord_t)(randf()*CANVAS_WIDTH), (lv_coord_t)(randf()*CANVAS_HEIGHT), makeRandomColor());
+}
+
 static void create_demo_app(void)
 {
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
     lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, CANVAS_WIDTH, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
-    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_WHITE, LV_OPA_COVER);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_invalidate(ssCanvasPtr);
+    lv_task_create(draw_canvas_task_cb, 50, LV_TASK_PRIO_LOW, NULL);
 }
 
 static void lv_tick_task(void *arg)
@@ -153,8 +153,8 @@ void GuiTask(void *pvParameter)
             lastLogPrintTimeMs = millis();
         }
 
-        lv_canvas_set_px(ssCanvasPtr, ((uint32_t)randf()) % 100, ((uint32_t)randf()) % 100, makeRandomColor());
-        lv_obj_invalidate(ssCanvasPtr);
+        // lv_canvas_set_px(ssCanvasPtr, ((uint32_t)randf()) % 100, ((uint32_t)randf()) % 100, makeRandomColor());
+        // lv_obj_invalidate(ssCanvasPtr);
 
         // Try to take the semaphore, call lvgl related function on success
         if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))

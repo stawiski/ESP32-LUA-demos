@@ -1,6 +1,6 @@
 #include "utils.h"
-#include "esp_system.h"
-#include "esp_timer.h"
+#include <esp_system.h>
+#include <esp_timer.h>
 
 lv_color_t makeRandomColor(void)
 {

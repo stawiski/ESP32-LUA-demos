@@ -1,11 +1,8 @@
 #pragma once
 
-/* Littlevgl specific */
-#ifdef LV_LVGL_H_INCLUDE_SIMPLE
-    #include "lvgl.h"
-#else
-    #include "lvgl/lvgl.h"
-#endif
+#include <stdint.h>
+#include <stdbool.h>
+#include <lvgl.h>
 
 #ifdef __cplusplus
 extern "C" {
