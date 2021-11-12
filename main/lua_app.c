@@ -38,18 +38,6 @@ static const lwmem_region_t* getLwmemHeapRegionForLua(void)
 
 static const char *TAG = "LUA-VFS";
 
-static void report(lua_State *L, int status)
-{
-    if (status == LUA_OK)
-    {
-        return;
-    }
-
-    const char *msg = lua_tostring(L, -1);
-    printf("%s\n", msg);
-    lua_pop(L, 1);
-}
-
 static void halt()
 {
     ESP_LOGE(TAG, "System halted");
@@ -138,9 +126,14 @@ static int luaDrawCell(lua_State *L)
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
     int isAlive = luaL_checkinteger(L, 3);
-    // lcdDrawPoint(x, y, att);
     GuiDrawPixel(x, y, isAlive ? LV_COLOR_BLACK : LV_COLOR_WHITE);
-    printf("luaDrawCell(%d, %d, %d)\n", x, y, isAlive);
+    return 0;
+}
+
+static int luaDelayMs(lua_State *L)
+{
+    int ms = luaL_checkinteger(L, 1);
+    vTaskDelay(pdMS_TO_TICKS(ms));
     return 0;
 }
 
@@ -150,43 +143,67 @@ static const struct luaL_Reg ssLuaDrawFuncs[] =
     {NULL, NULL}
 };
 
-int luaopen_lDraw(lua_State *L)
+static const struct luaL_Reg ssLuaRtosFuncs[] =
+{
+    {"delayMs", luaDelayMs},
+    {NULL, NULL}
+};
+
+static int luaopen_lDraw(lua_State *L)
 {
     luaL_newlib(L, ssLuaDrawFuncs);
     return 1;
 }
+
+static int luaopen_lRtos(lua_State *L)
+{
+    luaL_newlib(L, ssLuaRtosFuncs);
+    return 1;
+}
+
+static void luaLoadCustomLibs(lua_State *lua)
+{
+    luaL_requiref(lua, "draw", luaopen_lDraw, 1);
+    lua_pop(lua, 1);
+    luaL_requiref(lua, "rtos", luaopen_lRtos, 1);
+    lua_pop(lua, 1);
+}
+
+static lua_State *lua;
 
 void LuaTask(void *arg)
 {
     mount_fs();
     assert(lwmem_assignmem(ssLwmemHeapRegions, LWMEM_ARRAYSIZE(ssLwmemHeapRegions)));
 
-    while (1)
+    lua = lua_newstate(luaMemoryAllocator, NULL);
+    ESP_ERROR_CHECK(lua ? ESP_OK : ESP_FAIL);
+
+    luaL_openlibs(lua);
+    luaLoadCustomLibs(lua);
+
+    int r = luaL_loadfilex(lua, "/lua/main.lua", NULL);
+    ESP_ERROR_CHECK(r == LUA_OK ? ESP_OK : ESP_FAIL);
+
+    // while (1)
     {
-        lua_State *L = lua_newstate(luaMemoryAllocator, NULL);
-        ESP_ERROR_CHECK(L ? ESP_OK : ESP_FAIL);
+        // lua_newthread
 
-        luaL_openlibs(L);
-        luaL_requiref(L, "draw", luaopen_lDraw, 1);
-        lua_pop(L, 1);
-
-        int r = luaL_loadfilex(L, "/lua/main.lua", NULL);
-        if (r != LUA_OK)
+        if (lua_pcall(lua, 0, 0, 0) != LUA_OK)
         {
-            printf("Failed to execute /lua/main.lua\n");
+            const char *msg = lua_tostring(lua, -1);
+            printf("%s\n", msg);
+            lua_pop(lua, 1);
+            // break;
         }
-        else
-        {
-            r = lua_pcall(L, 0, LUA_MULTRET, 0);
-        }
-        printf("[LUA] Current heap usage %u/%u (%.1f%% free)\n", ssLuaUsedHeap, LUA_HEAP_SIZE, calculateFreeHeapPrecentage(ssLuaUsedHeap, LUA_HEAP_SIZE));
-
-        report(L, r);
-        lua_close(L);
 
         printf("[LUA] Maximum heap usage %u/%u (%.1f%% free)\n", ssLuaMaxHeapUsed, LUA_HEAP_SIZE, calculateFreeHeapPrecentage(ssLuaMaxHeapUsed, LUA_HEAP_SIZE));
-        printf("[LUA] heap: %d\n", xPortGetFreeHeapSize());
-        printf("[LUA] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
-        vTaskDelay(pdMS_TO_TICKS(500));
+        printf("[LUA] Task heap: %d\n", xPortGetFreeHeapSize());
+        printf("[LUA] Stack HWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    printf("[LUA] Task ended\n");
+    lua_close(lua);
+    vTaskDelete(NULL);
 }
