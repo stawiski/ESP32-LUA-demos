@@ -14,8 +14,6 @@
 #include "utils.h"
 
 #define LV_TICK_PERIOD_MS 1
-#define CANVAS_WIDTH 320
-#define CANVAS_HEIGHT 240
 
 // Forward declarations
 
@@ -28,7 +26,7 @@ static SemaphoreHandle_t xGuiSemaphore;
 static EXT_RAM_ATTR lv_color_t  ssFrameBufferA[DISP_BUF_SIZE * sizeof(lv_color_t)],
                                 ssFrameBufferB[DISP_BUF_SIZE * sizeof(lv_color_t)];
 
-static EXT_RAM_ATTR lv_color_t ssCanvasBuffer[CANVAS_WIDTH * CANVAS_HEIGHT * sizeof(lv_color_t)];
+static EXT_RAM_ATTR lv_color_t ssCanvasBuffer[LCD_WIDTH_PX * LCD_HEIGHT_PX * sizeof(lv_color_t)];
 static lv_obj_t *ssCanvasPtr;
 
 // Implementation
@@ -38,7 +36,7 @@ static lv_obj_t *ssCanvasPtr;
 static void create_demo_app(void)
 {
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
-    lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, CANVAS_WIDTH, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
+    lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, LCD_WIDTH_PX, LCD_HEIGHT_PX, LV_IMG_CF_TRUE_COLOR);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_GREEN, LV_OPA_COVER);
     lv_obj_invalidate(ssCanvasPtr);

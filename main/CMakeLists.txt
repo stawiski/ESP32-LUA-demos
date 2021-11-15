@@ -17,3 +17,5 @@ idf_component_register(SRCS
 )
 
 add_compile_definitions(LUA_HEAP_SIZE=262144) # 256KB
+add_compile_definitions(LCD_WIDTH_PX=320)
+add_compile_definitions(LCD_HEIGHT_PX=240)
