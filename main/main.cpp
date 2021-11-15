@@ -12,7 +12,7 @@
 // Application
 #include "lua_app.h"
 #include "gui_app.h"
-#include "life_app.h"
+#include "life_app.hpp"
 
 static void systemTask(void *pvParameter)
 {
