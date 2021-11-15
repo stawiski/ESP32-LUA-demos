@@ -1,13 +1,13 @@
 #pragma once
 
-// STL
-#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void LuaTask(void *arg);
+void LifeTask(void *pvParameter);
 
 #ifdef __cplusplus
 }

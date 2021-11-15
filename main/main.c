@@ -1,8 +1,6 @@
 // STL
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
 // ESP32
 #include <esp_system.h>
 #include <esp_spi_flash.h>
@@ -14,6 +12,7 @@
 // Application
 #include "lua_app.h"
 #include "gui_app.h"
+#include "life_app.h"
 
 static void systemTask(void *pvParameter)
 {
@@ -45,8 +44,9 @@ void app_main(void)
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
-    xTaskCreate(&systemTask, "system", 2 * 1024, NULL, 1, NULL);
-    xTaskCreate(&LuaTask, "lua", 16 * 1024, NULL, 5, NULL);
+    xTaskCreate(&systemTask, "system", 2 * 1024U, NULL, 1, NULL);
+    xTaskCreate(&LuaTask, "lua", 16 * 1024U, NULL, 5, NULL);
+    xTaskCreate(&LifeTask, "life", 4 * 1024U, NULL, 5, NULL);
 
     // If you want to use a task to create the graphic, you NEED to create a Pinned task
     // Otherwise there can be problem such as memory corruption and so on.

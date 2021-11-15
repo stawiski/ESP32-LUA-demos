@@ -14,8 +14,8 @@
 #include "utils.h"
 
 #define LV_TICK_PERIOD_MS 1
-#define CANVAS_WIDTH 50
-#define CANVAS_HEIGHT 50
+#define CANVAS_WIDTH 320
+#define CANVAS_HEIGHT 240
 
 // Forward declarations
 
@@ -40,7 +40,7 @@ static void create_demo_app(void)
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
     lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, CANVAS_WIDTH, CANVAS_HEIGHT, LV_IMG_CF_TRUE_COLOR);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_WHITE, LV_OPA_COVER);
+    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_GREEN, LV_OPA_COVER);
     lv_obj_invalidate(ssCanvasPtr);
 }
 
@@ -137,7 +137,7 @@ void GuiTask(void *pvParameter)
         }
 
         guiTaskLoop++;
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     printf("[GUI] Task ended\n");
@@ -152,6 +152,18 @@ void GuiDrawPixel(uint32_t x, uint32_t y, lv_color_t color)
     {
         lv_canvas_set_px(ssCanvasPtr, x, y, color);
         lv_obj_invalidate(ssCanvasPtr);
+        xSemaphoreGive(xGuiSemaphore);
+    }
+}
+
+void GuiDrawSquare(uint32_t x, uint32_t y, uint32_t width, lv_color_t color)
+{
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    {
+        lv_draw_rect_dsc_t rectangle;
+        lv_draw_rect_dsc_init(&rectangle);
+        rectangle.bg_color = color;
+        lv_canvas_draw_rect(ssCanvasPtr, x, y, width, width, &rectangle);
         xSemaphoreGive(xGuiSemaphore);
     }
 }

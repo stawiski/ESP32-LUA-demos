@@ -2,6 +2,7 @@ idf_component_register(SRCS
                     "main.c"
                     "lua_app.c"
                     "gui_app.c"
+                    "life_app.cpp"
                     "utils.c"
                     INCLUDE_DIRS "."
                     REQUIRES

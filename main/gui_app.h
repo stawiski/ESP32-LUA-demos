@@ -12,7 +12,8 @@ extern "C" {
 
 void GuiTask(void *pvParameter);
 void GuiDrawPixel(uint32_t x, uint32_t y, lv_color_t color);
+void GuiDrawSquare(uint32_t x, uint32_t y, uint32_t width, lv_color_t color);
 
 #ifdef __cplusplus
-extern }
+}
 #endif

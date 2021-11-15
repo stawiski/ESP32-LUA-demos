@@ -1,8 +1,5 @@
 // STL
 #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
-// #include <math.h>
 // ESP32
 #include <esp_system.h>
 #include <esp_spi_flash.h>
@@ -185,9 +182,15 @@ void LuaTask(void *arg)
     int r = luaL_loadfilex(lua, "/lua/main.lua", NULL);
     ESP_ERROR_CHECK(r == LUA_OK ? ESP_OK : ESP_FAIL);
 
+    GuiDrawSquare(0, 0, 10, LV_COLOR_PURPLE);
+    GuiDrawSquare(100, 100, 10, LV_COLOR_BLUE);
+
     // while (1)
     {
         // lua_newthread
+        // lua_rawgeti
+        // https://github.com/search?q=lua_rawgeti+lua_pcall+vTaskDelay&type=Code
+        // https://github.com/whitecatboard/Lua-RTOS-ESP8266/blob/76d1bf3dc99357e369684d9203643f1896eb323f/Lua/modules/thread.c
 
         if (lua_pcall(lua, 0, 0, 0) != LUA_OK)
         {
