@@ -26,7 +26,7 @@ static void systemTask(void *pvParameter)
     }
 }
 
-void app_main(void)
+extern "C" void app_main(void)
 {
     // Print chip information
     esp_chip_info_t chip_info;
