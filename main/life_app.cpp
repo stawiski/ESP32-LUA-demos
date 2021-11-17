@@ -3,6 +3,7 @@
 // FreeRTOS and ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 // Local
 #include "life_app.hpp"
 #include "gui_app.h"
@@ -23,7 +24,8 @@ typedef struct cellArray
 // Private variables
 
 static uint32_t ssDrawFailedCounter;
-static cellArray_t ssCellMapDrawn, ssCellMapNew;
+static cellArray_t ssCellMapDrawn, ssCellMap;
+static SemaphoreHandle_t xLifeSemaphore;
 
 static void clearCellMap(cellArray_t &cellMap)
 {
@@ -68,40 +70,76 @@ bool operator!=(const cellArray_t &lhs, const cellArray_t &rhs)
     return !(lhs == rhs);
 }
 
+static void updateCells(void)
+{
+    // Go through the cell map to compare new and drawn cells
+    for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+    {
+        for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
+        {
+            if (ssCellMapDrawn.cells[x][y] != ssCellMap.cells[x][y])
+            {
+                // Update cells that have changed
+                if (!GuiDrawSquare(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, ssCellMap.cells[x][y] ? LV_COLOR_BLACK : LV_COLOR_WHITE))
+                {
+                    ssDrawFailedCounter++;
+                }
+                ssCellMapDrawn.cells[x][y] = ssCellMap.cells[x][y];
+            }
+        }
+    }
+}
+
+void LifeInit(void)
+{
+    ssDrawFailedCounter = 0;
+    clearCellMap(ssCellMapDrawn);
+    clearCellMap(ssCellMap);
+    xLifeSemaphore = xSemaphoreCreateBinary();
+}
+
 void LifeTask(void *pvParameter)
 {
     (void) pvParameter;
 
-    clearCellMap(ssCellMapDrawn);
-    clearCellMap(ssCellMapNew);
-
+    xSemaphoreGive(xLifeSemaphore);
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     while (1)
     {
-        randomizeCellMap(ssCellMapNew);
+        // randomizeCellMap(ssCellMap);
 
-        // Go through the cell map to compare new and drawn cells
-        for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+        if (xSemaphoreTake(xLifeSemaphore, portMAX_DELAY) == pdTRUE)
         {
-            for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
-            {
-                if (ssCellMapDrawn.cells[x][y] != ssCellMapNew.cells[x][y])
-                {
-                    // Update cells that have changed
-                    if (!GuiDrawSquare(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, ssCellMapNew.cells[x][y] ? LV_COLOR_BLACK : LV_COLOR_WHITE))
-                    {
-                        ssDrawFailedCounter++;
-                    }
-                    ssCellMapDrawn.cells[x][y] = ssCellMapNew.cells[x][y];
-                }
-            }
+            updateCells();
+            xSemaphoreGive(xLifeSemaphore);
         }
-
         printf("[LIFE] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
         printf("[LIFE] ssDrawFailedCounter = %d\n", ssDrawFailedCounter);
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
     vTaskDelete(NULL);
+}
+
+bool LifeCellGet(uint32_t x, uint32_t y)
+{
+    return ssCellMap.cells[x][y];
+}
+
+bool LifeCellSet(uint32_t x, uint32_t y, bool isAlive)
+{
+    if (x >= CELL_MAP_WIDTH || y >= CELL_MAP_HEIGHT)
+    {
+        return false;
+    }
+
+    if (xSemaphoreTake(xLifeSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        ssCellMap.cells[x][y] = isAlive;
+        xSemaphoreGive(xLifeSemaphore);
+        return true;
+    }
+
+    return false;
 }

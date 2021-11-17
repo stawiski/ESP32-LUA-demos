@@ -1,6 +1,6 @@
 idf_component_register(SRCS
                     "main.cpp"
-                    "lua_app.c"
+                    "lua_app.cpp"
                     "gui_app.c"
                     "life_app.cpp"
                     "utils.c"
@@ -16,6 +16,9 @@ idf_component_register(SRCS
                     lvgl_esp32_drivers
 )
 
+# LUA
 add_compile_definitions(LUA_HEAP_SIZE=262144) # 256KB
+add_compile_definitions(LUA_32BITS)
+# LCD
 add_compile_definitions(LCD_WIDTH_PX=320)
 add_compile_definitions(LCD_HEIGHT_PX=240)

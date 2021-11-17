@@ -10,8 +10,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 // Application
-#include "lua_app.h"
 #include "gui_app.h"
+#include "lua_app.hpp"
 #include "life_app.hpp"
 
 static void systemTask(void *pvParameter)
@@ -43,6 +43,7 @@ extern "C" void app_main(void)
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
+    LifeInit();
     GuiInit();
 
     xTaskCreatePinnedToCore(&systemTask, "system", 2 * 1024U, NULL, 1, NULL, 0);

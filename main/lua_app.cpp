@@ -1,20 +1,18 @@
 // STL
-#include <stdio.h>
-// ESP32
+#include <cstdio>
+// FreeRTOS and ESP32
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <esp_system.h>
 #include <esp_spi_flash.h>
 #include <esp_spiffs.h>
 #include <esp_err.h>
 #include <esp_log.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 // Components
-#include <lua/lua.h>
-#include <lua/lauxlib.h>
-#include <lua/lualib.h>
+#include <lua/lua.hpp>
 #include <lwmem/lwmem.h>
 // Local
-#include "gui_app.h"
+#include "life_app.hpp"
 
 #ifndef LUA_HEAP_SIZE
     #error "LUA_HEAP_SIZE not defined"
@@ -35,7 +33,7 @@ static const lwmem_region_t* getLwmemHeapRegionForLua(void)
 
 static const char *TAG = "LUA-VFS";
 
-static void halt()
+static void halt(void)
 {
     ESP_LOGE(TAG, "System halted");
     while (1)
@@ -44,7 +42,7 @@ static void halt()
     }
 }
 
-static void mount_fs(void)
+static void mountFilesystem(void)
 {
     esp_vfs_spiffs_conf_t conf =
     {
@@ -118,12 +116,21 @@ float calculateFreeHeapPrecentage(uint32_t heapUsedBytes, uint32_t heapSizeBytes
     return 100.0f - ((((float)heapUsedBytes) * 100.0f) / ((float)heapSizeBytes));
 }
 
-static int luaDrawCell(lua_State *L)
+static int luaCellGet(lua_State *L)
+{
+    int x = luaL_checkinteger(L, 1);
+    int y = luaL_checkinteger(L, 2);
+
+    return LifeCellGet(x, y);
+    // return 0;
+}
+
+static int luaCellSet(lua_State *L)
 {
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
     int isAlive = luaL_checkinteger(L, 3);
-    // GuiDrawPixel(x, y, isAlive ? LV_COLOR_BLACK : LV_COLOR_WHITE);
+    LifeCellSet(x, y, isAlive);
     return 0;
 }
 
@@ -134,33 +141,34 @@ static int luaDelayMs(lua_State *L)
     return 0;
 }
 
-static const struct luaL_Reg ssLuaDrawFuncs[] =
+static const struct luaL_Reg ssLuaLibCell[] =
 {
-    {"drawCell", luaDrawCell},
+    {"get", luaCellGet},
+    {"set", luaCellSet},
     {NULL, NULL}
 };
 
-static const struct luaL_Reg ssLuaRtosFuncs[] =
+static const struct luaL_Reg ssLuaLibRtos[] =
 {
     {"delayMs", luaDelayMs},
     {NULL, NULL}
 };
 
-static int luaopen_lDraw(lua_State *L)
+static int luaopen_lCell(lua_State *L)
 {
-    luaL_newlib(L, ssLuaDrawFuncs);
+    luaL_newlib(L, ssLuaLibCell);
     return 1;
 }
 
 static int luaopen_lRtos(lua_State *L)
 {
-    luaL_newlib(L, ssLuaRtosFuncs);
+    luaL_newlib(L, ssLuaLibRtos);
     return 1;
 }
 
 static void luaLoadCustomLibs(lua_State *lua)
 {
-    luaL_requiref(lua, "draw", luaopen_lDraw, 1);
+    luaL_requiref(lua, "cell", luaopen_lCell, 1);
     lua_pop(lua, 1);
     luaL_requiref(lua, "rtos", luaopen_lRtos, 1);
     lua_pop(lua, 1);
@@ -168,9 +176,9 @@ static void luaLoadCustomLibs(lua_State *lua)
 
 static lua_State *lua;
 
-void LuaTask(void *arg)
+void LuaTask(void *pvParameter)
 {
-    mount_fs();
+    mountFilesystem();
     assert(lwmem_assignmem(ssLwmemHeapRegions, LWMEM_ARRAYSIZE(ssLwmemHeapRegions)));
 
     lua = lua_newstate(luaMemoryAllocator, NULL);
@@ -181,6 +189,8 @@ void LuaTask(void *arg)
 
     int r = luaL_loadfilex(lua, "/lua/main.lua", NULL);
     ESP_ERROR_CHECK(r == LUA_OK ? ESP_OK : ESP_FAIL);
+
+    vTaskDelay(pdMS_TO_TICKS(500));
 
     // while (1)
     {

@@ -6,10 +6,10 @@
 // FreeRTOS and ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <esp_freertos_hooks.h>
 #include <freertos/semphr.h>
 #include <freertos/queue.h>
 #include <esp_system.h>
+#include <esp_freertos_hooks.h>
 // Local
 #include "gui_app.h"
 #include "utils.h"
