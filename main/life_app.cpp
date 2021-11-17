@@ -1,31 +1,107 @@
+// STL
+#include <algorithm>
 // FreeRTOS and ESP32
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 // Local
 #include "life_app.hpp"
 #include "gui_app.h"
+#include "utils.h"
+
+// Definitions
 
 static const uint32_t CELL_SIZE = 10;
 static const uint32_t CELL_MAP_WIDTH = LCD_WIDTH_PX / CELL_SIZE;
 static const uint32_t CELL_MAP_HEIGHT = LCD_HEIGHT_PX / CELL_SIZE;
 
-static bool ssCellMap[CELL_MAP_WIDTH][CELL_MAP_HEIGHT];
+typedef struct cellArray
+{
+    bool cells[CELL_MAP_WIDTH][CELL_MAP_HEIGHT];
+
+} cellArray_t;
+
+// Private variables
+
+static uint32_t ssDrawFailedCounter;
+static cellArray_t ssCellMapDrawn, ssCellMapNew;
+
+static void clearCellMap(cellArray_t &cellMap)
+{
+    for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+    {
+        for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
+        {
+            cellMap.cells[x][y] = false;
+        }
+    }
+}
+
+static void randomizeCellMap(cellArray_t &cellMap)
+{
+    for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+    {
+        for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
+        {
+            cellMap.cells[x][y] = (randf() <= 0.1f);
+        }
+    }
+}
+
+bool operator==(const cellArray_t &lhs, const cellArray_t &rhs)
+{
+    for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+    {
+        for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
+        {
+            if (lhs.cells[x][y] != rhs.cells[x][y])
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool operator!=(const cellArray_t &lhs, const cellArray_t &rhs)
+{
+    return !(lhs == rhs);
+}
 
 void LifeTask(void *pvParameter)
 {
     (void) pvParameter;
 
-    for (auto& cellRow : ssCellMap)
-    {
-        for (auto& cell : cellRow)
-        {
-            cell = false;
-        }
-    }
+    clearCellMap(ssCellMapDrawn);
+    clearCellMap(ssCellMapNew);
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     while (1)
     {
-        printf("[LIFE] is life!\n");
-        vTaskDelay(pdMS_TO_TICKS(100));
+        randomizeCellMap(ssCellMapNew);
+
+        // Go through the cell map to compare new and drawn cells
+        for (uint32_t x = 0; x < CELL_MAP_WIDTH; x++)
+        {
+            for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
+            {
+                if (ssCellMapDrawn.cells[x][y] != ssCellMapNew.cells[x][y])
+                {
+                    // Update cells that have changed
+                    if (!GuiDrawSquare(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, ssCellMapNew.cells[x][y] ? LV_COLOR_BLACK : LV_COLOR_WHITE))
+                    {
+                        ssDrawFailedCounter++;
+                    }
+                    ssCellMapDrawn.cells[x][y] = ssCellMapNew.cells[x][y];
+                }
+            }
+        }
+
+        printf("[LIFE] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
+        printf("[LIFE] ssDrawFailedCounter = %d\n", ssDrawFailedCounter);
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
+
+    vTaskDelete(NULL);
 }

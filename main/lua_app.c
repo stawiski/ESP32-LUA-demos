@@ -123,7 +123,7 @@ static int luaDrawCell(lua_State *L)
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
     int isAlive = luaL_checkinteger(L, 3);
-    GuiDrawPixel(x, y, isAlive ? LV_COLOR_BLACK : LV_COLOR_WHITE);
+    // GuiDrawPixel(x, y, isAlive ? LV_COLOR_BLACK : LV_COLOR_WHITE);
     return 0;
 }
 
@@ -181,9 +181,6 @@ void LuaTask(void *arg)
 
     int r = luaL_loadfilex(lua, "/lua/main.lua", NULL);
     ESP_ERROR_CHECK(r == LUA_OK ? ESP_OK : ESP_FAIL);
-
-    GuiDrawSquare(0, 0, 10, LV_COLOR_PURPLE);
-    GuiDrawSquare(100, 100, 10, LV_COLOR_BLUE);
 
     // while (1)
     {

@@ -8,12 +8,24 @@
 #include <freertos/task.h>
 #include <esp_freertos_hooks.h>
 #include <freertos/semphr.h>
+#include <freertos/queue.h>
 #include <esp_system.h>
 // Local
 #include "gui_app.h"
 #include "utils.h"
 
 #define LV_TICK_PERIOD_MS 1
+
+// Private types
+
+typedef struct guiSquare
+{
+    uint16_t x;
+    uint16_t y;
+    uint16_t width;
+    lv_color_t color;
+
+} guiSquare_t;
 
 // Forward declarations
 
@@ -22,6 +34,7 @@ static void lv_tick_task(void *arg);
 // Private variables
 
 static SemaphoreHandle_t xGuiSemaphore;
+static QueueHandle_t xGuiSquareQueue;
 
 static EXT_RAM_ATTR lv_color_t  ssFrameBufferA[DISP_BUF_SIZE * sizeof(lv_color_t)],
                                 ssFrameBufferB[DISP_BUF_SIZE * sizeof(lv_color_t)];
@@ -38,7 +51,7 @@ static void create_demo_app(void)
     ssCanvasPtr = lv_canvas_create(lv_scr_act(), NULL);
     lv_canvas_set_buffer(ssCanvasPtr, ssCanvasBuffer, LCD_WIDTH_PX, LCD_HEIGHT_PX, LV_IMG_CF_TRUE_COLOR);
     lv_obj_align(ssCanvasPtr, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_GREEN, LV_OPA_COVER);
+    lv_canvas_fill_bg(ssCanvasPtr, LV_COLOR_WHITE, LV_OPA_COVER);
     lv_obj_invalidate(ssCanvasPtr);
 }
 
@@ -50,11 +63,15 @@ static void lv_tick_task(void *arg)
 
 // Public functions
 
+void GuiInit(void)
+{
+    xGuiSemaphore = xSemaphoreCreateBinary();
+    xGuiSquareQueue = xQueueCreate(1000, sizeof(guiSquare_t));
+}
+
 void GuiTask(void *pvParameter)
 {
     (void) pvParameter;
-    xGuiSemaphore = xSemaphoreCreateMutex();
-    xSemaphoreTake(xGuiSemaphore, portMAX_DELAY);
 
     lv_init();
     lvgl_driver_init();
@@ -127,6 +144,15 @@ void GuiTask(void *pvParameter)
             lastLogPrintTimeMs = millis();
         }
 
+        guiSquare_t square;
+        while (xQueueReceive(xGuiSquareQueue, &square, 0))
+        {
+            lv_draw_rect_dsc_t lvRectangle;
+            lv_draw_rect_dsc_init(&lvRectangle);
+            lvRectangle.bg_color = square.color;
+            lv_canvas_draw_rect(ssCanvasPtr, square.x, square.y, square.width, square.width, &lvRectangle);
+        }
+
         // Try to take the semaphore, call lvgl related function on success
         if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
         {
@@ -135,7 +161,7 @@ void GuiTask(void *pvParameter)
         }
 
         guiTaskLoop++;
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 
     printf("[GUI] Task ended\n");
@@ -144,24 +170,12 @@ void GuiTask(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-void GuiDrawPixel(uint32_t x, uint32_t y, lv_color_t color)
+bool GuiDrawSquare(uint16_t x, uint16_t y, uint16_t width, lv_color_t color)
 {
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
-    {
-        lv_canvas_set_px(ssCanvasPtr, x, y, color);
-        lv_obj_invalidate(ssCanvasPtr);
-        xSemaphoreGive(xGuiSemaphore);
-    }
-}
-
-void GuiDrawSquare(uint32_t x, uint32_t y, uint32_t width, lv_color_t color)
-{
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
-    {
-        lv_draw_rect_dsc_t rectangle;
-        lv_draw_rect_dsc_init(&rectangle);
-        rectangle.bg_color = color;
-        lv_canvas_draw_rect(ssCanvasPtr, x, y, width, width, &rectangle);
-        xSemaphoreGive(xGuiSemaphore);
-    }
+    guiSquare_t square;
+    square.x = x;
+    square.y = y;
+    square.width = width;
+    square.color = color;
+    return xQueueSend(xGuiSquareQueue, &square, 0);
 }
