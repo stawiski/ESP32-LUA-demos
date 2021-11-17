@@ -11,7 +11,7 @@
 #include <freertos/task.h>
 // Application
 #include "gui_app.h"
-#include "lua_app.hpp"
+#include "lua_app.h"
 #include "life_app.hpp"
 
 static void systemTask(void *pvParameter)
