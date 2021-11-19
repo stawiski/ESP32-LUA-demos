@@ -1,6 +1,3 @@
-local cell = require "cell"
-local utils = require "utils"
-
 local life = {}
 
 function printMap(map)
@@ -18,7 +15,6 @@ function calculateNewGeneration(map)
     for x = 0, #map do
         mapNew[x] = {}
         for y = 0, #map[x] do
-            local cell = map[x][y]
             local liveNeighborsCount =
                 countLiveNeightbour(map, x - 1, y - 1) +
                 countLiveNeightbour(map, x, y - 1) +
@@ -29,16 +25,16 @@ function calculateNewGeneration(map)
                 countLiveNeightbour(map, x, y + 1) +
                 countLiveNeightbour(map, x + 1, y + 1)
 
-            local newCell = utils.clone(cell)
-            if cell.isAlive and (liveNeighborsCount < 2 or liveNeighborsCount > 3) then
-                newCell.isAlive = false
+            -- Make new cell state by copying old cell state
+            local isAlive = map[x][y]
+
+            if isAlive and (liveNeighborsCount < 2 or liveNeighborsCount > 3) then
+                isAlive = false
+            elseif not isAlive and liveNeighborsCount == 3 then
+                isAlive = true
             end
 
-            if not cell.isAlive and liveNeighborsCount == 3 then
-                newCell.isAlive = true
-            end
-
-            mapNew[x][y] = newCell
+            mapNew[x][y] = isAlive
         end
     end
 
@@ -57,15 +53,14 @@ function countLiveNeightbour(map, x, y)
     if neighbour == nil then
         return 0
     end
-    return neighbour.isAlive and 1 or 0
+    return neighbour and 1 or 0
 end
 
 function generateInitialCells(map, mapSizeX, mapSizeY)
     for x = 0, mapSizeX - 1 do
         map[x] = {}
         for y = 0, mapSizeY - 1 do
-            local cell = Cell.new(x, y, math.random(0, 4) == 1)
-            map[x][y] = cell
+            map[x][y] = math.random(0, 4) == 1
         end
     end
 

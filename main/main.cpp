@@ -12,7 +12,6 @@
 // Application
 #include "gui_app.h"
 #include "lua_app.h"
-#include "life_app.hpp"
 
 static void systemTask(void *pvParameter)
 {
@@ -43,12 +42,10 @@ extern "C" void app_main(void)
 
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
-    LifeInit();
     GuiInit();
 
     xTaskCreatePinnedToCore(&systemTask, "system", 2 * 1024U, NULL, 1, NULL, 0);
     xTaskCreatePinnedToCore(&LuaTask, "lua", 16 * 1024U, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(&LifeTask, "life", 4 * 1024U, NULL, 6, NULL, 0);
 
     // If you want to use a task to create the graphic, you NEED to create a Pinned task
     // Otherwise there can be problem such as memory corruption and so on.

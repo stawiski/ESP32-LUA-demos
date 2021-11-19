@@ -14,7 +14,7 @@
 #include <lua/lualib.h>
 #include <lwmem/lwmem.h>
 // Local
-#include "life_app.hpp"
+#include "gui_app.h"
 
 #ifndef LUA_HEAP_SIZE
     #error "LUA_HEAP_SIZE not defined"
@@ -118,26 +118,13 @@ float calculateFreeHeapPrecentage(uint32_t heapUsedBytes, uint32_t heapSizeBytes
     return 100.0f - ((((float)heapUsedBytes) * 100.0f) / ((float)heapSizeBytes));
 }
 
-static int luaCellGet(lua_State *L)
+static int luaDrawSquare(lua_State *L)
 {
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
-
-    return LifeCellGet(x, y) ? 1 : 0;
-}
-
-static int luaCellSet(lua_State *L)
-{
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    int isAlive = luaL_checkinteger(L, 3);
-    LifeCellSet(x, y, isAlive);
-    return 0;
-}
-
-static int luaCellCommit(lua_State *L)
-{
-    LifeCellCommit();
+    int width = luaL_checkinteger(L, 3);
+    int color = luaL_checkinteger(L, 4);
+    GuiDrawSquare(x, y, width, color ? LV_COLOR_BLACK : LV_COLOR_WHITE);
     return 0;
 }
 
@@ -148,11 +135,9 @@ static int luaDelayMs(lua_State *L)
     return 0;
 }
 
-static const struct luaL_Reg ssLuaLibCell[] =
+static const struct luaL_Reg ssLuaLibDraw[] =
 {
-    {"get", luaCellGet},
-    {"set", luaCellSet},
-    {"commit", luaCellCommit},
+    {"square", luaDrawSquare},
     {NULL, NULL}
 };
 
@@ -162,9 +147,9 @@ static const struct luaL_Reg ssLuaLibRtos[] =
     {NULL, NULL}
 };
 
-static int luaopen_lCell(lua_State *L)
+static int luaopen_lDraw(lua_State *L)
 {
-    luaL_newlib(L, ssLuaLibCell);
+    luaL_newlib(L, ssLuaLibDraw);
     return 1;
 }
 
@@ -176,7 +161,7 @@ static int luaopen_lRtos(lua_State *L)
 
 static void luaLoadCustomLibs(lua_State *lua)
 {
-    luaL_requiref(lua, "cell", luaopen_lCell, 1);
+    luaL_requiref(lua, "draw", luaopen_lDraw, 1);
     lua_pop(lua, 1);
     luaL_requiref(lua, "rtos", luaopen_lRtos, 1);
     lua_pop(lua, 1);
