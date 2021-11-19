@@ -2,7 +2,7 @@ local life = require "life"
 
 CELL_SIZE = 10
 map = {}
-generateInitialCells(map, 15, 15)
+generateInitialCells(map, 24, 24)
 
 function drawGeneration(map)
     for x = 0, #map do
