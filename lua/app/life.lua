@@ -60,7 +60,7 @@ function generateInitialCells(map, mapSizeX, mapSizeY)
     for x = 0, mapSizeX - 1 do
         map[x] = {}
         for y = 0, mapSizeY - 1 do
-            map[x][y] = math.random(0, 4) == 1
+            map[x][y] = sys.randf() < 0.3
         end
     end
 

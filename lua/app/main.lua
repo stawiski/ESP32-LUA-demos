@@ -15,5 +15,5 @@ end
 while true do
     drawGeneration(map)
     map = calculateNewGeneration(map)
-    rtos.delayMs(1000)
+    sys.delayMs(1000)
 end

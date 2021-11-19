@@ -15,6 +15,7 @@
 #include <lwmem/lwmem.h>
 // Local
 #include "gui_app.h"
+#include "utils.h"
 
 #ifndef LUA_HEAP_SIZE
     #error "LUA_HEAP_SIZE not defined"
@@ -135,15 +136,22 @@ static int luaDelayMs(lua_State *L)
     return 0;
 }
 
+static int luaRandf(lua_State *L)
+{
+    lua_pushnumber(L, randf());
+    return 1;
+}
+
 static const struct luaL_Reg ssLuaLibDraw[] =
 {
     {"square", luaDrawSquare},
     {NULL, NULL}
 };
 
-static const struct luaL_Reg ssLuaLibRtos[] =
+static const struct luaL_Reg ssLuaLibSys[] =
 {
     {"delayMs", luaDelayMs},
+    {"randf", luaRandf},
     {NULL, NULL}
 };
 
@@ -153,9 +161,9 @@ static int luaopen_lDraw(lua_State *L)
     return 1;
 }
 
-static int luaopen_lRtos(lua_State *L)
+static int luaopen_lSys(lua_State *L)
 {
-    luaL_newlib(L, ssLuaLibRtos);
+    luaL_newlib(L, ssLuaLibSys);
     return 1;
 }
 
@@ -163,7 +171,7 @@ static void luaLoadCustomLibs(lua_State *lua)
 {
     luaL_requiref(lua, "draw", luaopen_lDraw, 1);
     lua_pop(lua, 1);
-    luaL_requiref(lua, "rtos", luaopen_lRtos, 1);
+    luaL_requiref(lua, "sys", luaopen_lSys, 1);
     lua_pop(lua, 1);
 }
 
