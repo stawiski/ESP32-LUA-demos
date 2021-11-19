@@ -24,7 +24,8 @@ typedef struct cellArray
 // Private variables
 
 static uint32_t ssDrawFailedCounter;
-static cellArray_t ssCellMapDrawn, ssCellMap;
+static cellArray_t ssCellMapCommited, ssCellMapUncommited;
+static bool ssCommitPending;
 static SemaphoreHandle_t xLifeSemaphore;
 
 static void clearCellMap(cellArray_t &cellMap)
@@ -77,14 +78,14 @@ static void updateCells(void)
     {
         for (uint32_t y = 0; y < CELL_MAP_HEIGHT; y++)
         {
-            if (ssCellMapDrawn.cells[x][y] != ssCellMap.cells[x][y])
+            if (ssCellMapCommited.cells[x][y] != ssCellMapUncommited.cells[x][y])
             {
                 // Update cells that have changed
-                if (!GuiDrawSquare(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, ssCellMap.cells[x][y] ? LV_COLOR_BLACK : LV_COLOR_WHITE))
+                if (!GuiDrawSquare(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, ssCellMapUncommited.cells[x][y] ? LV_COLOR_BLACK : LV_COLOR_WHITE))
                 {
                     ssDrawFailedCounter++;
                 }
-                ssCellMapDrawn.cells[x][y] = ssCellMap.cells[x][y];
+                ssCellMapCommited.cells[x][y] = ssCellMapUncommited.cells[x][y];
             }
         }
     }
@@ -93,8 +94,9 @@ static void updateCells(void)
 void LifeInit(void)
 {
     ssDrawFailedCounter = 0;
-    clearCellMap(ssCellMapDrawn);
-    clearCellMap(ssCellMap);
+    clearCellMap(ssCellMapCommited);
+    clearCellMap(ssCellMapUncommited);
+    ssCommitPending = false;
     xLifeSemaphore = xSemaphoreCreateBinary();
 }
 
@@ -107,11 +109,13 @@ void LifeTask(void *pvParameter)
 
     while (1)
     {
-        // randomizeCellMap(ssCellMap);
-
         if (xSemaphoreTake(xLifeSemaphore, portMAX_DELAY) == pdTRUE)
         {
-            updateCells();
+            if (ssCommitPending)
+            {
+                ssCommitPending = false;
+                updateCells();
+            }
             xSemaphoreGive(xLifeSemaphore);
         }
         printf("[LIFE] StackHWM: %d\n", uxTaskGetStackHighWaterMark(NULL));
@@ -124,7 +128,7 @@ void LifeTask(void *pvParameter)
 
 bool LifeCellGet(uint32_t x, uint32_t y)
 {
-    return ssCellMap.cells[x][y];
+    return ssCellMapCommited.cells[x][y];
 }
 
 bool LifeCellSet(uint32_t x, uint32_t y, bool isAlive)
@@ -136,7 +140,19 @@ bool LifeCellSet(uint32_t x, uint32_t y, bool isAlive)
 
     if (xSemaphoreTake(xLifeSemaphore, portMAX_DELAY) == pdTRUE)
     {
-        ssCellMap.cells[x][y] = isAlive;
+        ssCellMapUncommited.cells[x][y] = isAlive;
+        xSemaphoreGive(xLifeSemaphore);
+        return true;
+    }
+
+    return false;
+}
+
+bool LifeCellCommit(void)
+{
+    if (xSemaphoreTake(xLifeSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        ssCommitPending = true;
         xSemaphoreGive(xLifeSemaphore);
         return true;
     }

@@ -123,8 +123,7 @@ static int luaCellGet(lua_State *L)
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
 
-    return LifeCellGet(x, y);
-    // return 0;
+    return LifeCellGet(x, y) ? 1 : 0;
 }
 
 static int luaCellSet(lua_State *L)
@@ -133,6 +132,12 @@ static int luaCellSet(lua_State *L)
     int y = luaL_checkinteger(L, 2);
     int isAlive = luaL_checkinteger(L, 3);
     LifeCellSet(x, y, isAlive);
+    return 0;
+}
+
+static int luaCellCommit(lua_State *L)
+{
+    LifeCellCommit();
     return 0;
 }
 
@@ -147,6 +152,7 @@ static const struct luaL_Reg ssLuaLibCell[] =
 {
     {"get", luaCellGet},
     {"set", luaCellSet},
+    {"commit", luaCellCommit},
     {NULL, NULL}
 };
 

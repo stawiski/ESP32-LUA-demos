@@ -26,6 +26,7 @@ while true do
 
     print("setting cell [" .. x .. "," .. y .. "] to " .. isAlive)
     cell.set(math.random(0, 4), math.random(0, 4), math.random(0, 1))
+    cell.commit()
 
     rtos.delayMs(1000)
 end
