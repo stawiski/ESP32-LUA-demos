@@ -125,7 +125,7 @@ static int luaDrawSquare(lua_State *L)
     int y = luaL_checkinteger(L, 2);
     int width = luaL_checkinteger(L, 3);
     int color = luaL_checkinteger(L, 4);
-    GuiDrawSquare(x, y, width, color ? LV_COLOR_BLACK : LV_COLOR_WHITE);
+    GuiDrawSquare(x, y, width, (color == 1) ? LV_COLOR_BLACK : LV_COLOR_WHITE);
     return 0;
 }
 

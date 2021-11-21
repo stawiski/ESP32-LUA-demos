@@ -5,7 +5,7 @@
             "label": "build",
             "type": "shell",
             "isBackground": true,
-            "command": "docker run -it --rm -v`pwd`:/app lua543 luac -p lua/app/*.lua && time docker run --rm -v $PWD:/project -w /project espressif/idf idf.py build",
+            "command": "docker run -it --rm -v`pwd`/lua:/app lua543 luac -p life.lua && docker run -it --rm -v`pwd`/lua:/app lua543 busted test_life.lua && time docker run --rm -v $PWD:/project -w /project espressif/idf idf.py build",
             "group": {
                 "kind": "build",
                 "isDefault": true
